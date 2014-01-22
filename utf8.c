@@ -339,7 +339,7 @@ char read_escape_control_char(char c)
     else if (c == 'r')
         return '\r';
     else if (c == 'e')
-        return '\e';
+        return 033; // '\e'
     else if (c == 'b')
         return '\b';
     else if (c == 'f')
@@ -355,12 +355,12 @@ char read_escape_control_char(char c)
    returns number of input characters processed, 0 if error */
 size_t u8_read_escape_sequence(const char *str, size_t ssz, uint32_t *dest)
 {
-    assert(ssz > 0);
     uint32_t ch;
     char digs[10];
     int dno=0, ndig;
     size_t i=1;
     char c0 = str[0];
+    assert(ssz > 0);
 
     if (octal_digit(c0)) {
         i = 0;
@@ -418,7 +418,7 @@ size_t u8_unescape(char *buf, size_t sz, const char *src)
     return c;
 }
 
-static inline int buf_put2c(char *buf, const char *src)
+static int buf_put2c(char *buf, const char *src)
 {
     buf[0] = src[0];
     buf[1] = src[1];
@@ -435,7 +435,7 @@ int u8_escape_wchar(char *buf, size_t sz, uint32_t ch)
         return buf_put2c(buf, "\\t");
     else if (ch == L'\r')
         return buf_put2c(buf, "\\r");
-    else if (ch == L'\e')
+    else if (ch == 033) // L'\e'
         return buf_put2c(buf, "\\e");
     else if (ch == L'\b')
         return buf_put2c(buf, "\\b");
@@ -567,10 +567,10 @@ char *u8_memrchr(const char *s, uint32_t ch, size_t sz)
 
 int u8_is_locale_utf8(const char *locale)
 {
-    if (locale == NULL) return 0;
-
     /* this code based on libutf8 */
     const char* cp = locale;
+
+    if (locale == NULL) return 0;
 
     for (; *cp != '\0' && *cp != '@' && *cp != '+' && *cp != ','; cp++) {
         if (*cp == '.') {
@@ -588,14 +588,14 @@ int u8_is_locale_utf8(const char *locale)
 
 size_t u8_vprintf(const char *fmt, va_list ap)
 {
-    size_t cnt, sz=0, nc, needfree=0;
+    int cnt, sz=0, nc, needfree=0;
     char *buf;
     uint32_t *wcs;
 
     sz = 512;
     buf = (char*)alloca(sz);
     cnt = vsnprintf(buf, sz, fmt, ap);
-    if ((ssize_t)cnt < 0)
+    if (cnt < 0)
         return 0;
     if (cnt >= sz) {
         buf = (char*)malloc(cnt + 1);
@@ -603,7 +603,7 @@ size_t u8_vprintf(const char *fmt, va_list ap)
         vsnprintf(buf, cnt+1, fmt, ap);
     }
     wcs = (uint32_t*)alloca((cnt+1) * sizeof(uint32_t));
-    nc = u8_toucs(wcs, cnt+1, buf, cnt);
+    nc = u8_toucs(wcs, (size_t)cnt+1, buf, cnt);
     wcs[nc] = 0;
     printf("%ls", (wchar_t*)wcs);
     if (needfree) free(buf);
