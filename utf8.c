@@ -632,7 +632,7 @@ int u8_isvalid(const char *str, size_t length)
     const unsigned char *p, *pend = (unsigned char*)str + length;
     unsigned char c;
     int ret = 1; /* ASCII */
-    int ab;
+    size_t ab;
 
     for (p = (unsigned char*)str; p < pend; p++) {
         c = *p;
